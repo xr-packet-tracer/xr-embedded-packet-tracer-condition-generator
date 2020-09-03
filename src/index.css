@@ -1,0 +1,26 @@
+/*
+ *------------------------------------------------------------------
+ * index.css
+ * 
+ * Used for styling index.js
+ *
+ * June 2020, Rohith Raj S
+ *
+ * Copyright (c) 2020-2023 by Cisco Systems, Inc.
+ * All rights reserved.
+ *------------------------------------------------------------------
+ */
+ 
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}

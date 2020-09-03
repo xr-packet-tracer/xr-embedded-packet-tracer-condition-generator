@@ -1,0 +1,68 @@
+/*
+ *------------------------------------------------------------------
+ * Content.css
+ * 
+ * Used for styling Content component
+ *
+ * June 2020, Rohith Raj S
+ *
+ * Copyright (c) 2020-2023 by Cisco Systems, Inc.
+ * All rights reserved.
+ *------------------------------------------------------------------
+ */
+
+.container {
+  width: 600px;
+  margin: 50px auto;
+  position: sticky;
+}
+.progressbar {
+  counter-reset: step;
+}
+.progressbar li {
+  list-style-type: none;
+  width: 32%;
+  float: left;
+  font-size: 13px;
+  position: relative;
+  text-align: center;
+  text-transform: uppercase;
+  color: #00bceb;
+}
+.progressbar li:before {
+  width: 30px;
+  height: 30px;
+  content: counter(step);
+  counter-increment: step;
+  line-height: 30px;
+  border: 2px solid #00bceb;
+  display: block;
+  text-align: center;
+  margin: 0 auto 10px auto;
+  border-radius: 50%;
+  background-color: white;
+}
+.progressbar li:after {
+  width: 100%;
+  height: 2px;
+  content: "";
+  position: absolute;
+  background-color: #00bceb;
+  top: 15px;
+  left: -50%;
+  z-index: -1;
+}
+.progressbar li:first-child:after {
+  content: none;
+}
+.progressbar li.active {
+  color: #28a745;
+}
+.progressbar li.active:before {
+  border-color: #28a745;
+  content: "\2713";
+  color: #28a745;
+}
+.progressbar li.active + li:after {
+  background-color: #28a745;
+}
