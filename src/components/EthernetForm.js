@@ -61,9 +61,11 @@ class EthernetForm extends Component {
       otherType: "0x",
       dmacError: false,
       dmacMaskError: false,
+      dmacMaxOctetError: false,
       dmacMaskEmptyError: false,
       smacError: false,
       smacMaskError: false,
+      smacMaxOctetError: false,
       smacMaskEmptyError: false,
       otherTypeError: false,
       emptyError: false,
@@ -159,17 +161,29 @@ class EthernetForm extends Component {
       let mask1 = mask.replace(/\./g, "");
       let mask2 = mask1.replace(/^0+/, "");
       let mask3 = mask2.replace(/0+$/, "");
+      if (mask3.length > 8){
+        this.setState(
+          {
+          dmacMaxOctetError: true,
+          },
+          () => {
+          return false;
+          }
+          );
+      }
       if (mask3.length <= 8) return true;
     }
-    this.setState(
-      {
-        dmacMaskError: true,
-      },
-      () => {
-        return false;
+    else {
+      this.setState(
+        {
+          dmacMaskError: true,
+        },
+        () => {
+          return false;
+        }
+        );
       }
-    );
-  }
+    }
 
   /*
    * Validates SMAC Mask field of Ethernet.
@@ -181,16 +195,28 @@ class EthernetForm extends Component {
       let mask1 = mask.replace(/\./g, "");
       let mask2 = mask1.replace(/^0+/, "");
       let mask3 = mask2.replace(/0+$/, "");
+      if (mask3.length > 8){
+        this.setState(
+          {
+          smacMaxOctetError: true,
+          },
+          () => {
+          return false;
+          }
+          );
+      }
       if (mask3.length <= 8) return true;
     }
-    this.setState(
-      {
-        smacMaskError: true,
-      },
-      () => {
-        return false;
+    else {
+      this.setState(
+        {
+          smacMaskError: true,
+        },
+        () => {
+          return false;
+        }
+        );
       }
-    );
   }
 
   /*
@@ -446,9 +472,11 @@ class EthernetForm extends Component {
         ethernetSubmit: false,
         dmacError: false,
         dmacMaskError: false,
+        dmacMaxOctetError: false,
         dmacMaskEmptyError: false,
         smacError: false,
         smacMaskError: false,
+        smacMaxOctetError: false,
         smacMaskEmptyError: false,
         otherTypeError: false,
         emptyError: false,
@@ -655,9 +683,19 @@ class EthernetForm extends Component {
                 <Alert variant="danger">DMAC Mask not in standard format</Alert>
               </small>
             ) : null}
+            {this.state.dmacMaxOctetError ? (
+              <small>
+                <Alert variant="danger">Maximum 4 consecutive octets can be matched in DMAC mask</Alert>
+              </small>
+            ) : null}
             {this.state.smacMaskError ? (
               <small>
                 <Alert variant="danger">SMAC Mask not in standard format</Alert>
+              </small>
+            ) : null}
+            {this.state.smacMaxOctetError ? (
+              <small>
+                <Alert variant="danger">Maximum 4 consecutive octets can be matched in SMAC mask</Alert>
               </small>
             ) : null}
             {this.state.otherTypeError ? (
