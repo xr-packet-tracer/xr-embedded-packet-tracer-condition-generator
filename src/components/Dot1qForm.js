@@ -21,7 +21,6 @@ import {
   InputGroup,
   DropdownButton,
   Dropdown,
-  DropdownItem,
   Tooltip,
   Alert,
 } from "react-bootstrap";
@@ -477,7 +476,7 @@ export class Dot1qForm extends Component {
                     title={this.state.type}
                     onSelect={this.handleTypeChange}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">IPv4</Dropdown.Item>
                     <Dropdown.Item eventKey="2">IPv6</Dropdown.Item>
                     <Dropdown.Item eventKey="3">MPLS Unicast</Dropdown.Item>
