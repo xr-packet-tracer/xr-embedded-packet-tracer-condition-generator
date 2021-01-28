@@ -21,7 +21,6 @@ import {
   InputGroup,
   DropdownButton,
   Dropdown,
-  DropdownItem,
   Tooltip,
   Alert,
 } from "react-bootstrap";
@@ -538,7 +537,7 @@ export class SRv6Form extends Component {
                     title={this.state.nextHeader}
                     onSelect={this.handleNextHeaderChange}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">HOPOPT</Dropdown.Item>
                     <Dropdown.Item eventKey="2">ICMP</Dropdown.Item>
                     <Dropdown.Item eventKey="3">IGMP</Dropdown.Item>
