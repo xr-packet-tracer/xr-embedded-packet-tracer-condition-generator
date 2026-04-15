@@ -25,7 +25,6 @@ import {
   Alert,
 } from "react-bootstrap";
 import { FaQuestion } from "react-icons/fa";
-import DropdownItem from "react-bootstrap/DropdownItem";
 import IPPrecedenceOptions from "./IPPrecedenceOptions";
 import DSCPOptions from "./DSCPOptions";
 import MY_GLOBAL from "./Globals";
@@ -496,7 +495,7 @@ export class Ipv4Form extends Component {
                     title={this.state.selectedTos}
                     onSelect={this.handleTosSelection}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">IP Precedence</Dropdown.Item>
                     <Dropdown.Item eventKey="2">DSCP</Dropdown.Item>
                   </DropdownButton>

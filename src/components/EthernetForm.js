@@ -21,13 +21,18 @@ import {
   InputGroup,
   DropdownButton,
   Dropdown,
-  DropdownItem,
   Tooltip,
   Alert,
 } from "react-bootstrap";
 import { FaQuestion } from "react-icons/fa";
 import MY_GLOBAL from "./Globals";
 import DisplayTriplets from "./DisplayTriplets";
+import ConditionBudgetAlert from "./ConditionBudgetAlert";
+import {
+  createContiguousByteMask,
+  countTripletsFromFormattedMask,
+  formatMacMask,
+} from "./MaskHelpers";
 
 /*
  * Dictionary consisting of hexadecimal values for all the options available
@@ -59,6 +64,10 @@ class EthernetForm extends Component {
       smacMask: "",
       type: "Select",
       otherType: "0x",
+      dmacSliceStart: "0",
+      dmacSliceLength: "4",
+      smacSliceStart: "0",
+      smacSliceLength: "4",
       dmacError: false,
       dmacMaskError: false,
       dmacMaxOctetError: false,
@@ -85,6 +94,8 @@ class EthernetForm extends Component {
     this.calculateEthernetTriplet = this.calculateEthernetTriplet.bind(this);
     this.handleTypeChange = this.handleTypeChange.bind(this);
     this.bitwiseAnd = this.bitwiseAnd.bind(this);
+    this.applyDmacSliceMask = this.applyDmacSliceMask.bind(this);
+    this.applySmacSliceMask = this.applySmacSliceMask.bind(this);
   }
 
   /*
@@ -237,6 +248,30 @@ class EthernetForm extends Component {
     ];
     this.setState({
       type: options[eventKey],
+    });
+  }
+
+  applyDmacSliceMask() {
+    this.setState({
+      dmacMask: formatMacMask(
+        createContiguousByteMask(
+          6,
+          this.state.dmacSliceStart,
+          this.state.dmacSliceLength
+        )
+      ),
+    });
+  }
+
+  applySmacSliceMask() {
+    this.setState({
+      smacMask: formatMacMask(
+        createContiguousByteMask(
+          6,
+          this.state.smacSliceStart,
+          this.state.smacSliceLength
+        )
+      ),
     });
   }
 
@@ -496,6 +531,13 @@ class EthernetForm extends Component {
   }
 
   render(props) {
+    const dmacConditionCount =
+      countTripletsFromFormattedMask(this.state.dmacMask, /\./g);
+    const smacConditionCount =
+      countTripletsFromFormattedMask(this.state.smacMask, /\./g);
+    const ethernetConditionCount =
+      dmacConditionCount + smacConditionCount + (this.state.type !== "Select" ? 1 : 0);
+
     return (
       <React.Fragment>
         <Card.Body>
@@ -552,6 +594,47 @@ class EthernetForm extends Component {
               </Form.Group>
             </Form.Row>
             <Form.Row>
+              <Form.Group as={Col} controlId="formGridDMACSliceStart">
+                <Form.Label>DMAC Match Start Byte</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="dmacSliceStart"
+                  value={this.state.dmacSliceStart}
+                  onChange={this.handleChange}
+                >
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridDMACSliceLength">
+                <Form.Label>DMAC Match Length</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="dmacSliceLength"
+                  value={this.state.dmacSliceLength}
+                  onChange={this.handleChange}
+                >
+                  <option value="1">1 byte</option>
+                  <option value="2">2 bytes</option>
+                  <option value="3">3 bytes</option>
+                  <option value="4">4 bytes</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group
+                as={Col}
+                controlId="formGridDMACSliceMaskButton"
+                style={{ alignSelf: "end" }}
+              >
+                <Button variant="outline-info" onClick={this.applyDmacSliceMask}>
+                  Generate legal DMAC mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
               <Form.Group as={Col} controlId="formGridSMAC">
                 <Form.Label>
                   SMAC{" "}
@@ -604,6 +687,47 @@ class EthernetForm extends Component {
               </Form.Group>
             </Form.Row>
             <Form.Row>
+              <Form.Group as={Col} controlId="formGridSMACSliceStart">
+                <Form.Label>SMAC Match Start Byte</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="smacSliceStart"
+                  value={this.state.smacSliceStart}
+                  onChange={this.handleChange}
+                >
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridSMACSliceLength">
+                <Form.Label>SMAC Match Length</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="smacSliceLength"
+                  value={this.state.smacSliceLength}
+                  onChange={this.handleChange}
+                >
+                  <option value="1">1 byte</option>
+                  <option value="2">2 bytes</option>
+                  <option value="3">3 bytes</option>
+                  <option value="4">4 bytes</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group
+                as={Col}
+                controlId="formGridSMACSliceMaskButton"
+                style={{ alignSelf: "end" }}
+              >
+                <Button variant="outline-info" onClick={this.applySmacSliceMask}>
+                  Generate legal SMAC mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
               <Form.Group as={Col} controlId="formGridType">
                 <Form.Label>
                   Type{" "}
@@ -630,7 +754,7 @@ class EthernetForm extends Component {
                     title={this.state.type}
                     onSelect={this.handleTypeChange}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">IPv4</Dropdown.Item>
                     <Dropdown.Item eventKey="2">IPv6</Dropdown.Item>
                     <Dropdown.Item eventKey="3">MPLS Unicast</Dropdown.Item>
@@ -708,6 +832,10 @@ class EthernetForm extends Component {
                 <Alert variant="danger">All the fields can't be empty</Alert>
               </small>
             ) : null}
+            <ConditionBudgetAlert
+              label="Ethernet"
+              conditionsUsed={ethernetConditionCount}
+            />
 
             <Button
               variant="success"
