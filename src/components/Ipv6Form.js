@@ -25,12 +25,19 @@ import {
   Alert,
 } from "react-bootstrap";
 import { FaQuestion } from "react-icons/fa";
-import DropdownItem from "react-bootstrap/DropdownItem";
 import IPPrecedenceOptions from "./IPPrecedenceOptions";
 import DSCPOptions from "./DSCPOptions";
 import { Address6 } from "ip-address/ip-address";
 import MY_GLOBAL from "./Globals";
 import DisplayTriplets from "./DisplayTriplets";
+import ConditionBudgetAlert from "./ConditionBudgetAlert";
+import {
+  buildLocatorMask,
+  buildMicroSidMask,
+  countTripletsFromFormattedMask,
+  createContiguousByteMask,
+  formatIpv6Mask,
+} from "./MaskHelpers";
 
 export class Ipv6Form extends Component {
   constructor(props) {
@@ -48,6 +55,13 @@ export class Ipv6Form extends Component {
       destinationIPMask: "",
       tosIPPrecedenceValue: "0",
       tosDSCPValue: "0",
+      sourceSliceStart: "0",
+      sourceSliceLength: "4",
+      destinationSliceStart: "0",
+      destinationSliceLength: "4",
+      srv6LocatorBits: "48",
+      srv6UsidBits: "16",
+      srv6UsidIndex: "0",
       emptyError: false,
       sourceIPError: false,
       sourceIPMaskError: false,
@@ -74,6 +88,10 @@ export class Ipv6Form extends Component {
     this.validateIpv6Form = this.validateIpv6Form.bind(this);
     this.handleIpv6Submit = this.handleIpv6Submit.bind(this);
     this.bitwiseAnd = this.bitwiseAnd.bind(this);
+    this.applySourceSliceMask = this.applySourceSliceMask.bind(this);
+    this.applyDestinationSliceMask = this.applyDestinationSliceMask.bind(this);
+    this.applySrv6LocatorMask = this.applySrv6LocatorMask.bind(this);
+    this.applySrv6MicroSidMask = this.applySrv6MicroSidMask.bind(this);
   }
 
   /*
@@ -134,6 +152,52 @@ export class Ipv6Form extends Component {
     this.setState({
       tosDSCPValue: e.target.value,
     });
+  }
+
+  applySourceSliceMask() {
+    this.setState({
+      sourceIPMask: formatIpv6Mask(
+        createContiguousByteMask(
+          16,
+          this.state.sourceSliceStart,
+          this.state.sourceSliceLength
+        )
+      ),
+    });
+  }
+
+  applyDestinationSliceMask() {
+    this.setState({
+      destinationIPMask: formatIpv6Mask(
+        createContiguousByteMask(
+          16,
+          this.state.destinationSliceStart,
+          this.state.destinationSliceLength
+        )
+      ),
+    });
+  }
+
+  applySrv6LocatorMask() {
+    const mask = buildLocatorMask(this.state.srv6LocatorBits);
+    if (mask) {
+      this.setState({
+        destinationIPMask: mask,
+      });
+    }
+  }
+
+  applySrv6MicroSidMask() {
+    const mask = buildMicroSidMask(
+      this.state.srv6LocatorBits,
+      this.state.srv6UsidBits,
+      this.state.srv6UsidIndex
+    );
+    if (mask) {
+      this.setState({
+        destinationIPMask: mask,
+      });
+    }
   }
 
   /*
@@ -459,6 +523,15 @@ export class Ipv6Form extends Component {
   }
 
   render() {
+    const sourceConditionCount =
+      countTripletsFromFormattedMask(this.state.sourceIPMask, /:/g);
+    const destinationConditionCount =
+      countTripletsFromFormattedMask(this.state.destinationIPMask, /:/g);
+    const ipv6ConditionCount =
+      sourceConditionCount +
+      destinationConditionCount +
+      (this.state.selectedTos !== "Select" ? 1 : 0);
+
     return (
       <React.Fragment>
         <Card.Body>
@@ -484,7 +557,7 @@ export class Ipv6Form extends Component {
                     title={this.state.selectedTos}
                     onSelect={this.handleTosSelection}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">IP Precedence</Dropdown.Item>
                     <Dropdown.Item eventKey="2">DSCP</Dropdown.Item>
                   </DropdownButton>
@@ -563,6 +636,42 @@ export class Ipv6Form extends Component {
               </Form.Group>
             </Form.Row>
             <Form.Row>
+              <Form.Group as={Col} controlId="formGridSourceSliceStart">
+                <Form.Label>Source Match Start Byte</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="sourceSliceStart"
+                  value={this.state.sourceSliceStart}
+                  onChange={this.handleChange}
+                >
+                  {Array.from({ length: 16 }).map((_, i) => (
+                    <option key={"src-start-" + i} value={i.toString()}>
+                      {i}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridSourceSliceLength">
+                <Form.Label>Source Match Length</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="sourceSliceLength"
+                  value={this.state.sourceSliceLength}
+                  onChange={this.handleChange}
+                >
+                  <option value="1">1 byte</option>
+                  <option value="2">2 bytes</option>
+                  <option value="3">3 bytes</option>
+                  <option value="4">4 bytes</option>
+                </Form.Control>
+              </Form.Group>
+                <Form.Group as={Col} style={{ alignSelf: "end" }}>
+                <Button variant="outline-info" onClick={this.applySourceSliceMask}>
+                  Generate legal source mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
               <Form.Group as={Col} controlId="formGridDestinationIP">
                 <Form.Label>
                   Destination IP{" "}
@@ -617,6 +726,113 @@ export class Ipv6Form extends Component {
                 />
               </Form.Group>
             </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col} controlId="formGridDestinationSliceStart">
+                <Form.Label>Destination Match Start Byte</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="destinationSliceStart"
+                  value={this.state.destinationSliceStart}
+                  onChange={this.handleChange}
+                >
+                  {Array.from({ length: 16 }).map((_, i) => (
+                    <option key={"dst-start-" + i} value={i.toString()}>
+                      {i}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridDestinationSliceLength">
+                <Form.Label>Destination Match Length</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="destinationSliceLength"
+                  value={this.state.destinationSliceLength}
+                  onChange={this.handleChange}
+                >
+                  <option value="1">1 byte</option>
+                  <option value="2">2 bytes</option>
+                  <option value="3">3 bytes</option>
+                  <option value="4">4 bytes</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} style={{ alignSelf: "end" }}>
+                <Button
+                  variant="outline-info"
+                  onClick={this.applyDestinationSliceMask}
+                >
+                  Generate legal destination mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col}>
+                <Form.Label>SRv6 Locator Bits</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="srv6LocatorBits"
+                  value={this.state.srv6LocatorBits}
+                  onChange={this.handleChange}
+                >
+                  <option value="32">/32</option>
+                  <option value="48">/48</option>
+                  <option value="64">/64</option>
+                  <option value="96">/96</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} style={{ alignSelf: "end" }}>
+                <Button variant="outline-secondary" onClick={this.applySrv6LocatorMask}>
+                  Generate locator mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col}>
+                <Form.Label>micro-SID Size</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="srv6UsidBits"
+                  value={this.state.srv6UsidBits}
+                  onChange={this.handleChange}
+                >
+                  <option value="16">16 bits</option>
+                  <option value="32">32 bits</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col}>
+                <Form.Label>micro-SID Index</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="srv6UsidIndex"
+                  value={this.state.srv6UsidIndex}
+                  onChange={this.handleChange}
+                >
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <option key={"usid-" + i} value={i.toString()}>
+                      {i}
+                    </option>
+                  ))}
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} style={{ alignSelf: "end" }}>
+                <Button variant="outline-secondary" onClick={this.applySrv6MicroSidMask}>
+                  Generate micro-SID mask
+                </Button>
+              </Form.Group>
+            </Form.Row>
+            {this.state.destinationIPMask !== "" ? (
+              <small>
+                <Alert variant="info">
+                  Destination mask currently expands to{" "}
+                  {destinationConditionCount}{" "}
+                  packet tracer condition(s).
+                </Alert>
+              </small>
+            ) : null}
+            <ConditionBudgetAlert
+              label="IPv6"
+              conditionsUsed={ipv6ConditionCount}
+            />
             {/* Display custom error messages based on the
              * values of error state variables.
              */}

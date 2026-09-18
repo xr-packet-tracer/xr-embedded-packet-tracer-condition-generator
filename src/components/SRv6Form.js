@@ -21,13 +21,20 @@ import {
   InputGroup,
   DropdownButton,
   Dropdown,
-  DropdownItem,
   Tooltip,
   Alert,
 } from "react-bootstrap";
 import { FaQuestion } from "react-icons/fa";
 import DisplayTriplets from "./DisplayTriplets";
+import ConditionBudgetAlert from "./ConditionBudgetAlert";
 import MY_GLOBAL from "./Globals";
+import {
+  buildLocatorMask,
+  buildMicroSidMask,
+  buildTripletsFromHexMask,
+  canonicalIpv6Hex,
+  countTripletsFromFormattedMask,
+} from "./MaskHelpers";
 
 /*
  * Dictionary consisting of hexadecimal values for all the options available
@@ -61,6 +68,12 @@ export class SRv6Form extends Component {
       segmentsLeft: "",
       flags: "",
       tag: "",
+      destinationAddress: "",
+      locatorBits: "48",
+      microSidBits: "16",
+      microSidIndex: "0",
+      locatorMatchEnabled: false,
+      microSidMatchEnabled: false,
       emptyError: false,
       mandatoryError: false,
       nextHeaderOtherError: false,
@@ -68,6 +81,7 @@ export class SRv6Form extends Component {
       segmentsLeftError: false,
       flagsError: false,
       tagError: false,
+      destinationAddressError: false,
       tripletValue: "",
     };
 
@@ -87,6 +101,11 @@ export class SRv6Form extends Component {
       this
     );
     this.handleSRv6Submit = this.handleSRv6Submit.bind(this);
+    this.toggleLocatorMatch = this.toggleLocatorMatch.bind(this);
+    this.toggleMicroSidMatch = this.toggleMicroSidMatch.bind(this);
+    this.calculateIPv6DestinationBaseOffset = this.calculateIPv6DestinationBaseOffset.bind(
+      this
+    );
   }
 
   /*
@@ -129,6 +148,18 @@ export class SRv6Form extends Component {
   handleRoutingType() {
     this.setState((prevState) => ({
       routingType: !prevState.routingType,
+    }));
+  }
+
+  toggleLocatorMatch() {
+    this.setState((prevState) => ({
+      locatorMatchEnabled: !prevState.locatorMatchEnabled,
+    }));
+  }
+
+  toggleMicroSidMatch() {
+    this.setState((prevState) => ({
+      microSidMatchEnabled: !prevState.microSidMatchEnabled,
     }));
   }
 
@@ -212,6 +243,32 @@ export class SRv6Form extends Component {
     );
   }
 
+  calculateIPv6DestinationBaseOffset() {
+    let othersOffset = 0;
+
+    for (let i = 0; i < MY_GLOBAL.headersSelected.length; i++) {
+      if (MY_GLOBAL.headersSelected[i] === "IPv6") {
+        return othersOffset + 24;
+      } else if (MY_GLOBAL.headersSelected[i] === "Ethernet") {
+        othersOffset += 14;
+      } else if (MY_GLOBAL.headersSelected[i] === "MPLS") {
+        othersOffset += 4;
+      } else if (MY_GLOBAL.headersSelected[i] === "PW Control Word") {
+        othersOffset += 4;
+      } else if (MY_GLOBAL.headersSelected[i] === "PPPoE") {
+        othersOffset += 12;
+      } else if (MY_GLOBAL.headersSelected[i] === "IPv4") {
+        othersOffset += 20;
+      } else if (MY_GLOBAL.headersSelected[i] === "Dot1q") {
+        othersOffset += 4;
+      } else if (MY_GLOBAL.headersSelected[i] === "SRv6") {
+        othersOffset += MY_GLOBAL.srv6Length[i];
+      }
+    }
+
+    return null;
+  }
+
   /*
    * Validates the entire SRv6 form.
    */
@@ -270,7 +327,10 @@ export class SRv6Form extends Component {
       this.state.routingType === false &&
       this.state.segmentsLeft === "" &&
       this.state.flags === "" &&
-      this.state.tag === ""
+      this.state.tag === "" &&
+      this.state.destinationAddress === "" &&
+      this.state.locatorMatchEnabled === false &&
+      this.state.microSidMatchEnabled === false
     ) {
       this.setState(
         {
@@ -315,6 +375,13 @@ export class SRv6Form extends Component {
     }
 
     if (this.state.routingType === true) {
+      flag2 = 1;
+    }
+
+    if (
+      this.state.destinationAddress !== "" &&
+      (this.state.locatorMatchEnabled || this.state.microSidMatchEnabled)
+    ) {
       flag2 = 1;
     }
 
@@ -467,6 +534,42 @@ export class SRv6Form extends Component {
         "\n";
     }
 
+    if (
+      (this.state.locatorMatchEnabled || this.state.microSidMatchEnabled) &&
+      this.state.destinationAddress !== ""
+    ) {
+      const destinationHex = canonicalIpv6Hex(this.state.destinationAddress);
+      const destinationOffset = this.calculateIPv6DestinationBaseOffset();
+
+      if (destinationHex && destinationOffset !== null) {
+        if (this.state.locatorMatchEnabled) {
+          const locatorMask = buildLocatorMask(this.state.locatorBits);
+          ans += buildTripletsFromHexMask(
+            "SRv6 Locator",
+            destinationOffset,
+            destinationHex,
+            locatorMask.replace(/:/g, "")
+          );
+        }
+
+        if (this.state.microSidMatchEnabled) {
+          const microSidMask = buildMicroSidMask(
+            this.state.locatorBits,
+            this.state.microSidBits,
+            this.state.microSidIndex
+          );
+          if (microSidMask) {
+            ans += buildTripletsFromHexMask(
+              "SRv6 micro-SID",
+              destinationOffset,
+              destinationHex,
+              microSidMask.replace(/:/g, "")
+            );
+          }
+        }
+      }
+    }
+
     this.setState({
       tripletValue: ans,
     });
@@ -486,9 +589,30 @@ export class SRv6Form extends Component {
         segmentsLeftError: false,
         flagsError: false,
         tagError: false,
+        destinationAddressError: false,
         tripletValue: "",
       },
       () => {
+        if (
+          (this.state.locatorMatchEnabled || this.state.microSidMatchEnabled) &&
+          canonicalIpv6Hex(this.state.destinationAddress) === null
+        ) {
+          this.setState({
+            destinationAddressError: true,
+          });
+          return;
+        }
+
+        if (
+          (this.state.locatorMatchEnabled || this.state.microSidMatchEnabled) &&
+          this.calculateIPv6DestinationBaseOffset() === null
+        ) {
+          this.setState({
+            destinationAddressError: true,
+          });
+          return;
+        }
+
         if (index === MY_GLOBAL.headersSelected.length - 1) {
           if (this.validateSRv6FormLastOnStack()) {
             this.calculateSRv6Triplet(index);
@@ -509,6 +633,26 @@ export class SRv6Form extends Component {
   }
 
   render(props) {
+    const locatorMask = this.state.locatorMatchEnabled
+      ? buildLocatorMask(this.state.locatorBits)
+      : null;
+    const microSidMask = this.state.microSidMatchEnabled
+      ? buildMicroSidMask(
+          this.state.locatorBits,
+          this.state.microSidBits,
+          this.state.microSidIndex
+        )
+      : null;
+    const srv6ConditionCount =
+      (this.state.nextHeader !== "Select" ? 1 : 0) +
+      (this.state.hdrExtLen !== "" ? 1 : 0) +
+      (this.state.routingType === true ? 1 : 0) +
+      (this.state.segmentsLeft !== "" ? 1 : 0) +
+      (this.state.flags !== "" ? 1 : 0) +
+      (this.state.tag !== "" ? 1 : 0) +
+      countTripletsFromFormattedMask(locatorMask, /:/g) +
+      countTripletsFromFormattedMask(microSidMask, /:/g);
+
     return (
       <React.Fragment>
         <Card.Body>
@@ -538,7 +682,7 @@ export class SRv6Form extends Component {
                     title={this.state.nextHeader}
                     onSelect={this.handleNextHeaderChange}
                   >
-                    <DropdownItem eventKey="0">-- Select --</DropdownItem>
+                    <Dropdown.Item eventKey="0">-- Select --</Dropdown.Item>
                     <Dropdown.Item eventKey="1">HOPOPT</Dropdown.Item>
                     <Dropdown.Item eventKey="2">ICMP</Dropdown.Item>
                     <Dropdown.Item eventKey="3">IGMP</Dropdown.Item>
@@ -583,6 +727,81 @@ export class SRv6Form extends Component {
                   value={this.state.hdrExtLen}
                   onChange={this.handleChange}
                 />
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col} controlId="formGridSRv6DestinationAddress">
+                <Form.Label>SRv6 Destination Address</Form.Label>
+                <Form.Control
+                  type="text"
+                  name="destinationAddress"
+                  placeholder="Enter IPv6 DA for locator or micro-SID guidance"
+                  value={this.state.destinationAddress}
+                  onChange={this.handleChange}
+                />
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col} controlId="formGridLocatorMatch">
+                <Form.Label>Generate locator triplets</Form.Label>
+                <Form.Check
+                  type="switch"
+                  id={this.props.action + "-locator"}
+                  label=""
+                  onClick={this.toggleLocatorMatch}
+                />
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridLocatorBits">
+                <Form.Label>Locator Length</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="locatorBits"
+                  value={this.state.locatorBits}
+                  onChange={this.handleChange}
+                >
+                  <option value="32">/32</option>
+                  <option value="48">/48</option>
+                  <option value="64">/64</option>
+                  <option value="96">/96</option>
+                </Form.Control>
+              </Form.Group>
+            </Form.Row>
+            <Form.Row>
+              <Form.Group as={Col} controlId="formGridMicroSidMatch">
+                <Form.Label>Generate micro-SID triplets</Form.Label>
+                <Form.Check
+                  type="switch"
+                  id={this.props.action + "-usid"}
+                  label=""
+                  onClick={this.toggleMicroSidMatch}
+                />
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridMicroSidBits">
+                <Form.Label>micro-SID Size</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="microSidBits"
+                  value={this.state.microSidBits}
+                  onChange={this.handleChange}
+                >
+                  <option value="16">16 bits</option>
+                  <option value="32">32 bits</option>
+                </Form.Control>
+              </Form.Group>
+              <Form.Group as={Col} controlId="formGridMicroSidIndex">
+                <Form.Label>micro-SID Index</Form.Label>
+                <Form.Control
+                  as="select"
+                  name="microSidIndex"
+                  value={this.state.microSidIndex}
+                  onChange={this.handleChange}
+                >
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <option key={"micro-sid-index-" + i} value={i.toString()}>
+                      {i}
+                    </option>
+                  ))}
+                </Form.Control>
               </Form.Group>
             </Form.Row>
             <Form.Row>
@@ -701,6 +920,17 @@ export class SRv6Form extends Component {
                 <Alert variant="danger">Invalid Tag</Alert>
               </small>
             ) : null}
+            {this.state.destinationAddressError ? (
+              <small>
+                <Alert variant="danger">
+                  Invalid SRv6 destination address for locator or micro-SID guidance
+                </Alert>
+              </small>
+            ) : null}
+            <ConditionBudgetAlert
+              label="SRv6"
+              conditionsUsed={srv6ConditionCount}
+            />
 
             <Button
               variant="success"
