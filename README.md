@@ -27,8 +27,32 @@ The UI now includes guided helpers to make those limits visible while building m
 - SRv6 micro-SID mask generation
 - live condition-budget summaries in the relevant forms
 
-## Runtime Requirements
+## Runtime Requirements Option 1
+# XR Embedded Packet Tracer - Condition Generator
 
+Generate IOS XR embedded packet tracer match conditions in `offset / value / mask` form, in your browser.
+
+## Use it now (no install)
+
+**[Launch the Condition Generator](https://xr-packet-tracer.github.io/xr-embedded-packet-tracer-condition-generator/)**
+
+The app is a single self-contained HTML file. There is nothing to install, no Node.js, and no build step.
+
+- **Run online:** use the link above.
+- **Run offline:** download [`docs/index.html`](docs/index.html), then open it in any modern browser. It works from a local disk, a file share, or a jump host with no internet access.
+- **Runs locally in the browser:** all condition generation happens client-side.
+
+The tool does not run packet tracing itself. It produces the condition triplets you paste into XR packet tracer commands.
+
+### What it covers
+
+Ethernet, Dot1q, MPLS, IPv4, IPv6, SRv6, TCP, UDP, with guided mask helpers that keep you inside the XR limits of 3 conditions and 4 octets per condition.
+
+### HTML version vs. source
+
+The HTML file is the production build of the React app in `src/`. Same functionality, packaged into one file for easy distribution. Most users only need the HTML file. Clone and build the source only if you want to modify the tool.
+
+## Runtime Requirements Option 2
 This project is intended to run on current Node.js LTS versions.
 
 See [package.json](/nobackup/avidakov/ws/xr-dev/tmp/xr-packet-tracer-master/package.json) for the supported engine range:
